@@ -39,8 +39,7 @@ pool.getConnection((err, connection) => {
   if (err) {
     console.error('❌ MySQL Connection Error:', err.message);
     console.error('Code:', err.code);
-    console.error('
-📋 Troubleshooting:');
+    console.error('📋 Troubleshooting:');
     console.error('1. Check Railway MySQL credentials in .env');
     console.error('2. Ensure Railway MySQL has public networking enabled');
     console.error('3. Verify host, port, user, password are correct');
