@@ -62,12 +62,20 @@ exports.createExpense = async (req, res) => {
   try {
     const { title, amount, category, description, date } = req.body;
 
+    // Validation
+    if (!title || !amount || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide title, amount, and category',
+      });
+    }
+
     const expense = await Expense.create({
       user: req.user._id,
       title,
       amount,
       category,
-      description,
+      description: description || '',
       date: date || Date.now(),
     });
 
@@ -179,12 +187,24 @@ exports.getStatistics = async (req, res) => {
       }
     });
 
+    // Monthly breakdown
+    const monthlyTotals = {};
+    expenses.forEach((expense) => {
+      const month = new Date(expense.date).toISOString().slice(0, 7); // YYYY-MM
+      if (monthlyTotals[month]) {
+        monthlyTotals[month] += expense.amount;
+      } else {
+        monthlyTotals[month] = expense.amount;
+      }
+    });
+
     res.json({
       success: true,
       statistics: {
         total,
         count: expenses.length,
         categoryTotals,
+        monthlyTotals,
       },
     });
   } catch (error) {

@@ -15,6 +15,14 @@ exports.signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields',
+      });
+    }
+
     // Check if user exists
     const userExists = await User.findOne({ email });
 
@@ -63,6 +71,14 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password',
+      });
+    }
 
     // Check for user
     const user = await User.findOne({ email }).select('+password');
@@ -118,6 +134,47 @@ exports.getProfile = async (req, res) => {
         profileImage: user.profileImage,
       },
     });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+      user.name = req.body.name || user.name;
+      user.email = req.body.email || user.email;
+      user.profileImage = req.body.profileImage || user.profileImage;
+
+      if (req.body.password) {
+        user.password = req.body.password;
+      }
+
+      const updatedUser = await user.save();
+
+      res.json({
+        success: true,
+        user: {
+          _id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          profileImage: updatedUser.profileImage,
+        },
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
   } catch (error) {
     res.status(500).json({
       success: false,
