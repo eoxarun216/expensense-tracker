@@ -1,7 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
-const budgetRoutes = require('./routes/budgets');
 
 // Load environment variables
 dotenv.config();
@@ -15,7 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Add headers manually (optional - for basic access control)
+// CORS Headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -32,7 +31,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/expenses', require('./routes/expenses'));
-app.use('/api/budgets', budgetRoutes);
+app.use('/api/budgets', require('./routes/budgets'));
 
 // Root route
 app.get('/', (req, res) => {
@@ -41,7 +40,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
-      expenses: '/api/expenses'
+      expenses: '/api/expenses',
+      budgets: '/api/budgets'
     }
   });
 });
@@ -73,5 +73,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Database connected`);
 });

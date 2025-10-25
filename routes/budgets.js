@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Budget = require('../models/Budget');
-const auth = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 
 // Get all budgets for user
-router.get('/', auth, async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const budgets = await Budget.find({ userId: req.user.id }).sort({ createdAt: -1 });
     res.json({ success: true, budgets });
@@ -15,7 +15,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Create budget
-router.post('/', auth, async (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
     const { category, limit, period } = req.body;
 
@@ -29,7 +29,7 @@ router.post('/', auth, async (req, res) => {
     if (existingBudget) {
       return res.status(400).json({
         success: false,
-        message: 'Budget already exists for this category',
+        message: 'Budget already exists for this category and period',
       });
     }
 
@@ -49,7 +49,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update budget
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
   try {
     const { category, limit, period } = req.body;
 
@@ -77,7 +77,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete budget
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
   try {
     const budget = await Budget.findById(req.params.id);
 
