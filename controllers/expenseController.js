@@ -5,9 +5,12 @@ const Expense = require('../models/Expense');
 // @access  Private
 exports.getExpenses = async (req, res) => {
   try {
-    // ✅ Use userId consistently
-    const expenses = await Expense.find({ userId: req.user.id })
+    console.log('📥 Get expenses for user:', req.user._id);
+    
+    const expenses = await Expense.find({ user: req.user._id })
       .sort({ date: -1 });
+
+    console.log(`✅ Found ${expenses.length} expenses`);
 
     res.json({
       success: true,
@@ -15,7 +18,7 @@ exports.getExpenses = async (req, res) => {
       expenses,
     });
   } catch (error) {
-    console.error('Get expenses error:', error);
+    console.error('❌ Get expenses error:', error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -37,8 +40,8 @@ exports.getExpense = async (req, res) => {
       });
     }
 
-    // ✅ Check ownership with userId
-    if (expense.userId.toString() !== req.user.id) {
+    // Check ownership
+    if (expense.user.toString() !== req.user._id.toString()) {
       return res.status(401).json({
         success: false,
         message: 'Not authorized',
@@ -50,7 +53,7 @@ exports.getExpense = async (req, res) => {
       expense,
     });
   } catch (error) {
-    console.error('Get expense error:', error);
+    console.error('❌ Get expense error:', error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -63,19 +66,23 @@ exports.getExpense = async (req, res) => {
 // @access  Private
 exports.createExpense = async (req, res) => {
   try {
+    console.log('📥 Create expense request');
+    console.log('👤 User:', req.user._id);
+    console.log('📦 Body:', req.body);
+    
     const { title, amount, category, description, date } = req.body;
 
     // Validation
     if (!title || !amount || !category) {
+      console.log('❌ Validation failed');
       return res.status(400).json({
         success: false,
         message: 'Please provide title, amount, and category',
       });
     }
 
-    // ✅ Create with userId
     const expense = await Expense.create({
-      userId: req.user.id,
+      user: req.user._id,
       title,
       amount,
       category,
@@ -83,12 +90,14 @@ exports.createExpense = async (req, res) => {
       date: date || Date.now(),
     });
 
+    console.log('✅ Expense created:', expense._id);
+
     res.status(201).json({
       success: true,
       expense,
     });
   } catch (error) {
-    console.error('Create expense error:', error);
+    console.error('❌ Create expense error:', error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -110,8 +119,8 @@ exports.updateExpense = async (req, res) => {
       });
     }
 
-    // ✅ Check ownership with userId
-    if (expense.userId.toString() !== req.user.id) {
+    // Check ownership
+    if (expense.user.toString() !== req.user._id.toString()) {
       return res.status(401).json({
         success: false,
         message: 'Not authorized',
@@ -129,7 +138,7 @@ exports.updateExpense = async (req, res) => {
       expense,
     });
   } catch (error) {
-    console.error('Update expense error:', error);
+    console.error('❌ Update expense error:', error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -151,8 +160,8 @@ exports.deleteExpense = async (req, res) => {
       });
     }
 
-    // ✅ Check ownership with userId
-    if (expense.userId.toString() !== req.user.id) {
+    // Check ownership
+    if (expense.user.toString() !== req.user._id.toString()) {
       return res.status(401).json({
         success: false,
         message: 'Not authorized',
@@ -166,7 +175,7 @@ exports.deleteExpense = async (req, res) => {
       message: 'Expense removed',
     });
   } catch (error) {
-    console.error('Delete expense error:', error);
+    console.error('❌ Delete expense error:', error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -179,8 +188,7 @@ exports.deleteExpense = async (req, res) => {
 // @access  Private
 exports.getStatistics = async (req, res) => {
   try {
-    // ✅ Use userId consistently
-    const expenses = await Expense.find({ userId: req.user.id });
+    const expenses = await Expense.find({ user: req.user._id });
 
     // Calculate total
     const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -198,7 +206,7 @@ exports.getStatistics = async (req, res) => {
     // Monthly breakdown
     const monthlyTotals = {};
     expenses.forEach((expense) => {
-      const month = new Date(expense.date).toISOString().slice(0, 7); // YYYY-MM
+      const month = new Date(expense.date).toISOString().slice(0, 7);
       if (monthlyTotals[month]) {
         monthlyTotals[month] += expense.amount;
       } else {
@@ -216,7 +224,7 @@ exports.getStatistics = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get statistics error:', error);
+    console.error('❌ Get statistics error:', error);
     res.status(500).json({
       success: false,
       message: error.message,
