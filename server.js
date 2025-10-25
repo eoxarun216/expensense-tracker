@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const budgetRoutes = require('./routes/budgets');
 
 // Load environment variables
 dotenv.config();
@@ -31,6 +32,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/expenses', require('./routes/expenses'));
+app.use('/api/budgets', budgetRoutes);
 
 // Root route
 app.get('/', (req, res) => {
