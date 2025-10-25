@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { register, login } = require('../controllers/authController');
+const { signup, login, getProfile, updateProfile } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
-// Existing routes
-router.post('/signup', register);
+// Public routes
+router.post('/signup', signup);
 router.post('/login', login);
 
-// ✅ ADD THIS NEW ROUTE - Get current user profile
+// Protected routes
 router.get('/me', protect, async (req, res) => {
   try {
     const User = require('../models/User');
@@ -24,6 +24,7 @@ router.get('/me', protect, async (req, res) => {
       success: true,
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         createdAt: user.createdAt,
@@ -37,5 +38,8 @@ router.get('/me', protect, async (req, res) => {
     });
   }
 });
+
+router.get('/profile', protect, getProfile);
+router.put('/profile', protect, updateProfile);
 
 module.exports = router;
