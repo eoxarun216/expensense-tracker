@@ -3,7 +3,6 @@ const router = express.Router();
 const Category = require('../models/Category');
 const auth = require('../middleware/auth');
 
-// Get all categories
 router.get('/', auth, async (req, res) => {
   try {
     const categories = await Category.find({ userId: req.userId })
@@ -32,7 +31,6 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Add category
 router.post('/', auth, async (req, res) => {
   try {
     const { name, icon, color } = req.body;

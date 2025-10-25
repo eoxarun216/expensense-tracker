@@ -23,7 +23,6 @@ const categorySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index for faster queries
 categorySchema.index({ userId: 1, name: 1 });
 
 module.exports = mongoose.model('Category', categorySchema);

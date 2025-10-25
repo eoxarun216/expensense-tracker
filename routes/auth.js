@@ -6,7 +6,6 @@ const User = require('../models/User');
 const Category = require('../models/Category');
 const auth = require('../middleware/auth');
 
-// Default categories to create for new users
 const defaultCategories = [
   { name: 'Food', icon: '🍔', color: '#FF6B6B' },
   { name: 'Transport', icon: '🚗', color: '#4ECDC4' },
@@ -18,12 +17,10 @@ const defaultCategories = [
   { name: 'Others', icon: '📦', color: '#A29BFE' }
 ];
 
-// Register
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -31,7 +28,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -40,24 +36,20 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
     const user = await User.create({
       name,
       email,
       password: hashedPassword
     });
 
-    // Create default categories for user
     const categories = defaultCategories.map(cat => ({
       ...cat,
       userId: user._id
     }));
     await Category.insertMany(categories);
 
-    // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET,
@@ -86,12 +78,10 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -99,7 +89,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -108,7 +97,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({
@@ -117,7 +105,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate token
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET,
@@ -146,7 +133,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
