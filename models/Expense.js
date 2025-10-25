@@ -20,16 +20,90 @@ const ExpenseSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide a category'],
     enum: [
-      'Food',
-      'Transport',
-      'Shopping',
+      // Housing & Utilities
+      'Rent/Mortgage',
+      'Electricity',
+      'Water',
+      'Gas',
+      'Internet',
+      'Maintenance',
+      'Property Tax',
+      
+      // Transportation
+      'Fuel',
+      'Vehicle Maintenance',
+      'Vehicle Insurance',
+      'Parking',
+      'Public Transport',
+      'Taxi/Ride',
+      'Vehicle Loan',
+      
+      // Food & Dining
+      'Groceries',
+      'Restaurants',
+      'Snacks',
+      'Coffee/Beverages',
+      'Food Delivery',
+      
+      // Shopping
+      'Clothing',
+      'Accessories',
+      'Electronics',
+      'Home Decor',
+      'Online Shopping',
+      
+      // Health & Fitness
+      'Medical',
+      'Medicines',
+      'Gym/Fitness',
+      'Health Insurance',
+      'Wellness/Spa',
+      
+      // Education
+      'School/College Fees',
+      'Books',
+      'Online Courses',
+      'Coaching',
+      
+      // Bills & Subscriptions
+      'Mobile Recharge',
+      'Streaming Services',
+      'Software Subscriptions',
+      'Cloud Storage',
+      
+      // Work/Business
+      'Office Rent',
+      'Business Supplies',
+      'Work Travel',
+      'Tools/Software',
+      'Contractors',
+      
+      // Finance
+      'Loan Payments',
+      'Credit Card Bills',
+      'Investments',
+      'Insurance',
+      'Savings',
+      
+      // Personal & Family
+      'Child Care',
+      'Elder Care',
+      'Gifts',
+      'Donations',
+      'Events',
+      
+      // Travel & Leisure
+      'Flights/Trains',
+      'Hotels',
+      'Tours/Activities',
       'Entertainment',
-      'Health',
-      'Bills',
-      'Education',
-      'Others',
+      
+      // Others
+      'Pet Care',
+      'Emergency',
+      'Miscellaneous',
     ],
-    default: 'Others',
+    default: 'Miscellaneous',
   },
   description: {
     type: String,
@@ -49,5 +123,6 @@ const ExpenseSchema = new mongoose.Schema({
 
 // Index for faster queries
 ExpenseSchema.index({ user: 1, date: -1 });
+ExpenseSchema.index({ user: 1, category: 1 });
 
 module.exports = mongoose.model('Expense', ExpenseSchema);
