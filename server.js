@@ -23,12 +23,9 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
-  
+
   // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
@@ -40,7 +37,7 @@ app.use((req, res, next) => {
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Expense Tracker API is running',
     version: '1.0.0',
     status: 'active',
@@ -49,6 +46,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       expenses: '/api/expenses',
       budgets: '/api/budgets',
+      reminders: '/api/reminders', // --- ADDED
       health: '/api/health'
     }
   });
@@ -56,9 +54,9 @@ app.get('/', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     success: true,
-    status: 'OK', 
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
@@ -69,20 +67,19 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/budgets', require('./routes/budgets'));
+app.use('/api/reminders', require('./routes/reminders')); // --- ADDED
 
-// 404 handler - Must come before error handler
+// 404 handler
 app.use((req, res, next) => {
-  res.status(404).json({ 
+  res.status(404).json({
     success: false,
-    message: `Route not found: ${req.method} ${req.path}` 
+    message: `Route not found: ${req.method} ${req.path}`
   });
 });
 
-// Error handling middleware - Must be last
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  
-  // Mongoose validation error
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(e => e.message);
     return res.status(400).json({
@@ -91,32 +88,25 @@ app.use((err, req, res, next) => {
       errors
     });
   }
-  
-  // Mongoose duplicate key error
   if (err.code === 11000) {
     return res.status(400).json({
       success: false,
       message: 'Duplicate field value entered'
     });
   }
-  
-  // JWT errors
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
       message: 'Invalid token'
     });
   }
-  
   if (err.name === 'TokenExpiredError') {
     return res.status(401).json({
       success: false,
       message: 'Token expired'
     });
   }
-  
-  // Default error
-  res.status(err.statusCode || 500).json({ 
+  res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || 'Server error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
@@ -130,21 +120,21 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Database: Connected`);
-  console.log(`🌐 API URL: ${process.env.NODE_ENV === 'production' ? 'https://expensense-tracker-api.onrender.com' : `http://localhost:${PORT}`}`);
+  console.log(`🌐 API URL: ${process.env.NODE_ENV === 'production'
+    ? 'https://expensense-tracker-api.onrender.com'
+    : `http://localhost:${PORT}`}`);
   console.log('=================================');
 });
 
-// Handle unhandled promise rejections
+// Unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Promise Rejection:', err);
-  // Close server & exit process
   server.close(() => process.exit(1));
 });
 
-// Handle uncaught exceptions
+// Uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
-  // Close server & exit process
   server.close(() => process.exit(1));
 });
 
