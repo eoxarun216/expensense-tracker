@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
+const { body,query, validationResult } = require('express-validator');
 const logger = require('../utils/logger');
 
 // Controllers
@@ -315,10 +315,12 @@ router.post(
 router.get(
   '/social/:provider/url',
   [
-    body('redirectUrl')
+    // Validate redirect URL from query parameter
+    query('redirectUrl') // <-- Use query instead of body
       .isURL()
       .withMessage('Please provide a valid redirect URL'),
   ],
+  validateRequest,
   getSocialAuthUrl
 );
 

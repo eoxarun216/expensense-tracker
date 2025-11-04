@@ -62,45 +62,6 @@ app.use(
   })
 );
 
-/**
- * Manual CORS Header Handling (without cors package)
- * Set custom headers for all responses
- */
-app.use((req, res, next) => {
-  // Set security headers manually
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-
-  // --- CORS Configuration ---
-  // Define allowed origins based on environment
-  const allowedOrigins = process.env.NODE_ENV === 'development'
-      ? ['http://localhost:55079'] // <-- Update this port if your Flutter app runs on a different one
-      : ['https://your-production-frontend-domain.com']; // Add your production domain(s)
-
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (process.env.NODE_ENV === 'development' && origin?.startsWith('http://localhost:')) {
-    // Allow any localhost port during development (less strict)
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  // Note: For production, explicitly list your frontend domains instead of wildcard logic
-
-  // Handle preflight requests (OPTIONS)
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Allow', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID, X-Requested-With');
-    // Access-Control-Allow-Origin is already set above
-    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
-    return res.sendStatus(200);
-  }
-
-  next();
-});
-
 // Trust proxy for deployment platforms
 app.set('trust proxy', process.env.TRUST_PROXY || 1);
 
@@ -458,7 +419,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`\n🔗 Connection Information:`);
   console.log(`   • API URL: ${process.env.API_URL || `http://localhost:${PORT}`}`);
   console.log(`   • Database: MongoDB Connected`);
-  console.log(`   • CORS: Manual headers`);
+  console.log(`   • CORS: Not configured (will use default browser policy)`);
   console.log(`\n📚 Documentation:`);
   console.log(`   • API Docs: ${process.env.API_URL || `http://localhost:${PORT}`}/api/docs`);
   console.log(`   • Health Check: ${process.env.API_URL || `http://localhost:${PORT}`}/api/health`);
