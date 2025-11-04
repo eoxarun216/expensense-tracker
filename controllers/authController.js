@@ -258,14 +258,14 @@ exports.login = async (req, res) => {
     }
 
     // Check if account is locked (using the plain object from lean())
-    if (user.accountLocked && user.lockUntil && new Date() < user.lockUntil) {
-      logger.warn('Login: Account locked', { email });
-      return res.status(423).json({
-        success: false,
-        message: 'Account is temporarily locked. Please try again later.',
-        lockUntil: user.lockUntil,
-      });
-    }
+if (user.accountLocked && user.lockUntil && new Date() < user.lockUntil) {
+  logger.warn('Login: Account locked', { email });
+  return res.status(423).json({ // <-- Or potentially 403
+    success: false,
+    message: 'Account is temporarily locked. Please try again later.',
+    lockUntil: user.lockUntil, // <-- Provides unlock time
+  });
+}
 
     // Check password using the plain object's password hash
     const isPasswordMatch = await bcrypt.compare(password, user.password);
