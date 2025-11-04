@@ -814,6 +814,21 @@ UserSchema.post('save', function(doc, next) {
   next();
 });
 
+// Add a refresh token (rotating, single-use only)
+UserSchema.methods.addRefreshToken = async function(token) {
+  this.refreshTokens.push({ token, createdAt: new Date() });
+  // Limit to last 10 tokens
+  if (this.refreshTokens.length > 10) {
+    this.refreshTokens = this.refreshTokens.slice(-10);
+  }
+  await this.save();
+};
+
+UserSchema.methods.removeRefreshToken = async function(token) {
+  this.refreshTokens = this.refreshTokens.filter(rt => rt.token !== token);
+  await this.save();
+  return this;
+};
 // ============= JSON OUTPUT OPTIONS =============
 
 UserSchema.set('toJSON', {
