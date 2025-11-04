@@ -73,12 +73,28 @@ app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
+  // --- CORS Configuration ---
+  // Define allowed origins based on environment
+  const allowedOrigins = process.env.NODE_ENV === 'development'
+      ? ['http://localhost:55079'] // <-- Update this port if your Flutter app runs on a different one
+      : ['https://your-production-frontend-domain.com']; // Add your production domain(s)
+
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (process.env.NODE_ENV === 'development' && origin?.startsWith('http://localhost:')) {
+    // Allow any localhost port during development (less strict)
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  // Note: For production, explicitly list your frontend domains instead of wildcard logic
+
   // Handle preflight requests (OPTIONS)
   if (req.method === 'OPTIONS') {
     res.setHeader('Allow', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID, X-Requested-With');
-    res.setHeader('Access-Control-Max-Age', '86400');
+    // Access-Control-Allow-Origin is already set above
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
     return res.sendStatus(200);
   }
 
