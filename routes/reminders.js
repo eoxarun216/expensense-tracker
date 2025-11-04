@@ -3,16 +3,17 @@ const router = express.Router();
 const Reminder = require('../models/Reminder');
 const { protect } = require('../middleware/auth');
 
-// ==================== GET ALL REMINDERS ====================
-
+// ==================== GET ALL REMINDERS (with filters) ====================
 router.get('/', protect, async (req, res) => {
   try {
-    const { type, status, frequency, from, to } = req.query;
+    const { type, status, frequency, from, to, expenseId } = req.query;
     const query = { userId: req.user.id };
 
     if (type) query.type = type;
     if (status) query.status = status;
     if (frequency) query.frequency = frequency;
+    if (expenseId) query.expenseId = expenseId;
+
     if (from || to) {
       query.dueDate = {};
       if (from) query.dueDate.$gte = new Date(from);
@@ -22,13 +23,11 @@ router.get('/', protect, async (req, res) => {
     const reminders = await Reminder.find(query).sort({ dueDate: 1 });
     res.json({ success: true, count: reminders.length, reminders });
   } catch (err) {
-    console.error('Error fetching reminders:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 });
 
 // ==================== ANALYTICS: UPCOMING & OVERDUE ====================
-
 router.get('/summary', protect, async (req, res) => {
   try {
     const now = new Date();
@@ -47,12 +46,11 @@ router.get('/summary', protect, async (req, res) => {
       next: upcoming.sort((a, b) => a.dueDate - b.dueDate)[0] || null
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 });
 
 // ==================== CREATE REMINDER ====================
-
 router.post('/', protect, async (req, res) => {
   try {
     const reminder = new Reminder({ ...req.body, userId: req.user.id });
@@ -64,7 +62,6 @@ router.post('/', protect, async (req, res) => {
 });
 
 // ==================== UPDATE REMINDER ====================
-
 router.put('/:id', protect, async (req, res) => {
   try {
     let reminder = await Reminder.findOne({ _id: req.params.id, userId: req.user.id });
@@ -79,13 +76,13 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // ==================== MARK AS PAID ====================
-
 router.patch('/:id/paid', protect, async (req, res) => {
   try {
     let reminder = await Reminder.findOne({ _id: req.params.id, userId: req.user.id });
     if (!reminder) return res.status(404).json({ success: false, message: "Not found" });
 
     reminder.status = "paid";
+    // Optionally, link an expenseId: reminder.expenseId = req.body.expenseId;
     await reminder.save();
     res.json({ success: true, message: "Reminder marked as paid", reminder });
   } catch (err) {
@@ -93,8 +90,22 @@ router.patch('/:id/paid', protect, async (req, res) => {
   }
 });
 
-// ==================== DELETE REMINDER ====================
+// ==================== REWORK PAID (UNMARK AS PAID) ====================
+router.patch('/:id/unpaid', protect, async (req, res) => {
+  try {
+    let reminder = await Reminder.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!reminder) return res.status(404).json({ success: false, message: "Not found" });
 
+    reminder.status = "upcoming";
+    // Optionally, remove link: reminder.expenseId = null;
+    await reminder.save();
+    res.json({ success: true, message: "Reminder reverted to unpaid/upcoming", reminder });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ==================== DELETE REMINDER ====================
 router.delete('/:id', protect, async (req, res) => {
   try {
     await Reminder.findOneAndDelete({ _id: req.params.id, userId: req.user.id });

@@ -10,20 +10,25 @@ const {
 } = require('../controllers/expenseController');
 const { protect } = require('../middleware/auth');
 
-// All routes are protected
+// All routes below require authentication
 router.use(protect);
 
-// Statistics route must come before /:id route
+// GET statistics BEFORE :id route (ordering matters for param matching)
 router.get('/statistics', getStatistics);
 
-// CRUD routes
-router.route('/')
-  .get(getExpenses)
-  .post(createExpense);
+// CRUD core routes
+router
+  .route('/')
+  .get(getExpenses)    // GET /api/expenses - list all for user
+  .post(createExpense); // POST /api/expenses - create for user
 
-router.route('/:id')
-  .get(getExpense)
-  .put(updateExpense)
-  .delete(deleteExpense);
+router
+  .route('/:id')
+  .get(getExpense)     // GET /api/expenses/:id - single expense
+  .put(updateExpense)  // PUT /api/expenses/:id
+  .delete(deleteExpense); // DELETE /api/expenses/:id
+
+// (Optional) GET expenses by reminder link
+// router.get('/by-reminder/:reminderId', getExpensesByReminder);
 
 module.exports = router;
