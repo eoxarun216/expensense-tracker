@@ -74,6 +74,7 @@ router.get('/summary', protect, async (req, res) => {
 router.get('/income', protect, async (req, res) => {
   try {
     const { period } = req.query;
+    // Note: Filtering happens in JS after fetching from DB
     const incomes = await Budget.getIncomeByUser(req.user.id);
     
     // Filter by period if provided
@@ -96,6 +97,7 @@ router.get('/income', protect, async (req, res) => {
 router.get('/expenses', protect, async (req, res) => {
   try {
     const { period } = req.query;
+    // Note: Filtering happens in JS after fetching from DB
     const expenses = await Budget.getExpensesByUser(req.user.id);
     
     // Filter by period if provided
@@ -121,6 +123,14 @@ router.post('/', protect, async (req, res) => {
   try {
     const { category, limit, period, type, incomeSource, incomeAmount } = req.body;
     
+    // Validate type if provided
+    if (type && !['income', 'expense'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type must be either "income" or "expense"',
+      });
+    }
+
     // Validate required fields based on type
     if (type === 'income') {
       if (!incomeSource || incomeAmount === undefined) {
@@ -129,7 +139,7 @@ router.post('/', protect, async (req, res) => {
           message: 'Income source and amount are required for income entries',
         });
       }
-    } else if (type === 'expense' || !type) {
+    } else if (type === 'expense' || !type) { // Default to expense if type is not provided
       if (!limit) {
         return res.status(400).json({
           success: false,

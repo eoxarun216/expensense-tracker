@@ -37,7 +37,7 @@ const BudgetSchema = new mongoose.Schema({
   // ============= INCOME-SPECIFIC FIELDS =============
   incomeSource: {
     type: String,
-    enum: ['personal', 'family', 'business', 'investment', 'other'],
+    enum: ['personal', 'family', 'business', 'investment', 'other', 'additional'], // Added 'additional' enum value if needed by your frontend
     trim: true,
     // Only required if type is 'income'
     required: function() {
@@ -62,14 +62,7 @@ const BudgetSchema = new mongoose.Schema({
       message: 'Income amount is required for income entries',
     },
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
+  // createdAt and updatedAt are handled by timestamps: true
 }, {
   timestamps: true, // Automatically manages createdAt and updatedAt
 });
@@ -130,7 +123,7 @@ BudgetSchema.virtual('status').get(function() {
 BudgetSchema.methods.updateSpent = function(amount) {
   if (this.type === 'expense') {
     this.spent = amount;
-    this.updatedAt = Date.now();
+    // updatedAt will be updated automatically by timestamps
     return this.save();
   }
   throw new Error('Cannot update spent amount for income entries');
@@ -140,7 +133,7 @@ BudgetSchema.methods.updateSpent = function(amount) {
 BudgetSchema.methods.updateIncome = function(amount) {
   if (this.type === 'income') {
     this.incomeAmount = amount;
-    this.updatedAt = Date.now();
+    // updatedAt will be updated automatically by timestamps
     return this.save();
   }
   throw new Error('Cannot update income amount for expense entries');
@@ -303,12 +296,12 @@ BudgetSchema.statics.getFinancialHealth = async function(userId, period = null) 
 
 // ============= MIDDLEWARE =============
 
-// Pre-save validation
+// Pre-save validation and data integrity
 BudgetSchema.pre('save', function(next) {
   // Ensure income entries don't have spent values
   if (this.type === 'income') {
     this.spent = 0;
-    if (this.limit > 0) this.limit = 0;
+    if (this.limit > 0) this.limit = 0; // Or perhaps throw an error if limit is set for income?
   }
   
   // Ensure expense entries don't have income fields
@@ -317,12 +310,7 @@ BudgetSchema.pre('save', function(next) {
     if (!this.incomeSource) this.incomeSource = undefined;
   }
   
-  next();
-});
-
-// Update the updatedAt timestamp before saving
-BudgetSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  // updatedAt is handled automatically by timestamps: true
   next();
 });
 
