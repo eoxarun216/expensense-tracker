@@ -1,4 +1,4 @@
-// File: server.js
+// server.js
 
 const express = require('express');
 const dotenv = require('dotenv');
@@ -8,6 +8,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
+const cookieParser = require('cookie-parser'); // added
 
 const connectDB = require('./config/db');
 const logger = require('./utils/logger');
@@ -18,12 +19,7 @@ const logger = require('./utils/logger');
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = [
-  'MONGODB_URI',
-  'JWT_SECRET',
-  'NODE_ENV',
-];
-
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'NODE_ENV'];
 requiredEnvVars.forEach(varName => {
   if (!process.env[varName]) {
     logger.error(`Missing required environment variable: ${varName}`);
@@ -42,6 +38,24 @@ connectDB().catch(err => {
 // ============= EXPRESS APP SETUP =============
 
 const app = express();
+
+// Trust proxy for deployment platforms (convert env to number/boolean if provided)
+const trustProxy = process.env.TRUST_PROXY === undefined ? 1 : process.env.TRUST_PROXY;
+app.set('trust proxy', trustProxy);
+
+// ============= REQUEST PARSING MIDDLEWARE =============
+
+/**
+ * Body parser with size limits
+ * NOTE: Must be registered before any middleware that reads req.body
+ */
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/**
+ * Cookie parser (for refresh tokens in cookies)
+ */
+app.use(cookieParser());
 
 // ============= SECURITY MIDDLEWARE =============
 
@@ -62,29 +76,29 @@ app.use(
   })
 );
 
-// Trust proxy for deployment platforms
-app.set('trust proxy', process.env.TRUST_PROXY || 1);
-
 /**
  * MongoDB sanitization - prevent NoSQL injection
+ * Keep this after body parsing
  */
 app.use(mongoSanitize());
 
 /**
- * XSS Protection middleware
+ * XSS Protection middleware (basic sanitizer)
+ * Runs after body parser so req.body is available
  */
 app.use((req, res, next) => {
-  // Remove dangerous characters from user inputs
   const sanitize = (str) => {
     if (typeof str === 'string') {
-      return str.replace(/[<>\"']/g, '');
+      return str.replace(/[<>"']/g, '');
     }
     return str;
   };
 
   // Sanitize query parameters
-  Object.keys(req.query).forEach(key => {
-    req.query[key] = sanitize(req.query[key]);
+  Object.keys(req.query || {}).forEach(key => {
+    if (typeof req.query[key] === 'string') {
+      req.query[key] = sanitize(req.query[key]);
+    }
   });
 
   // Sanitize body
@@ -99,13 +113,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ============= REQUEST PARSING MIDDLEWARE =============
-
-/**
- * Body parser with size limits
- */
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// ============= RESPONSE & PERFORMANCE MIDDLEWARE =============
 
 /**
  * Compression middleware - compress responses
@@ -138,28 +146,29 @@ app.use(morgan(morganFormat, {
 }));
 
 /**
- * Custom request logging
+ * Custom request logging (logs slower requests and warnings)
  */
 app.use((req, res, next) => {
   const start = Date.now();
 
-  // Log response after it's sent
   res.on('finish', () => {
-    const duration = Date.now() - start;
+    const durationMs = Date.now() - start;
     const logData = {
       requestId: req.id,
       method: req.method,
       path: req.path,
       statusCode: res.statusCode,
-      duration: `${duration}ms`,
+      duration: `${durationMs}ms`,
       ip: req.ip,
       userAgent: req.get('user-agent'),
     };
 
     if (res.statusCode >= 400) {
       logger.warn('HTTP Request', logData);
-    } else if (duration > 1000) {
+    } else if (durationMs > 1000) {
       logger.info('Slow Request', logData);
+    } else {
+      logger.debug('HTTP Request', logData);
     }
   });
 
@@ -173,11 +182,11 @@ app.use((req, res, next) => {
  */
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // 1000 requests per windowMs
+  max: 1000,
   message: 'Too many requests from this IP, please try again later',
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  skip: (req) => process.env.NODE_ENV === 'development',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'development',
 });
 
 app.use(globalLimiter);
@@ -187,9 +196,9 @@ app.use(globalLimiter);
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // 5 requests per 15 minutes
+  max: 5, // 5 requests per 15 minutes per IP
   message: 'Too many login attempts, please try again later',
-  skip: (req) => process.env.NODE_ENV === 'development',
+  skip: () => process.env.NODE_ENV === 'development',
 });
 
 /**
@@ -197,18 +206,13 @@ const authLimiter = rateLimit({
  */
 const createDeleteLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute
+  max: 30,
   message: 'Too many operations, please slow down',
-  skip: (req) => process.env.NODE_ENV === 'development',
+  skip: () => process.env.NODE_ENV === 'development',
 });
 
 // ============= HEALTH & INFO ENDPOINTS =============
 
-/**
- * @route   GET /
- * @desc    API information and available endpoints
- * @access  Public
- */
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -220,52 +224,27 @@ app.get('/', (req, res) => {
     uptime: `${Math.floor(process.uptime())}s`,
     documentation: `${process.env.API_URL || 'http://localhost:5000'}/api/docs`,
     endpoints: {
-      auth: {
-        url: '/api/auth',
-        description: 'Authentication endpoints',
-        requiresAuth: false,
-      },
-      expenses: {
-        url: '/api/expenses',
-        description: 'Expense management',
-        requiresAuth: true,
-      },
-      budgets: {
-        url: '/api/budgets',
-        description: 'Budget management',
-        requiresAuth: true,
-      },
-      reminders: {
-        url: '/api/reminders',
-        description: 'Reminder management',
-        requiresAuth: true,
-      },
-      health: {
-        url: '/api/health',
-        description: 'Health check',
-        requiresAuth: false,
-      },
+      auth: { url: '/api/auth', description: 'Authentication endpoints', requiresAuth: false },
+      expenses: { url: '/api/expenses', description: 'Expense management', requiresAuth: true },
+      budgets: { url: '/api/budgets', description: 'Budget management', requiresAuth: true },
+      reminders: { url: '/api/reminders', description: 'Reminder management', requiresAuth: true },
+      health: { url: '/api/health', description: 'Health check', requiresAuth: false },
     },
   });
 });
 
-/**
- * @route   GET /api/health
- * @desc    Health check endpoint
- * @access  Public
- */
 app.get('/api/health', (req, res) => {
+  // NOTE: you can add real DB/cache checks here
   const healthData = {
     success: true,
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: `${Math.floor(process.uptime())}s`,
     environment: process.env.NODE_ENV || 'development',
-    responseTime: `${Date.now()}ms`,
     version: process.env.API_VERSION || '1.0.0',
     services: {
-      database: 'connected',
-      cache: 'operational',
+      database: 'connected', // consider a real check
+      cache: 'operational',  // consider a real check
       api: 'operational',
     },
   };
@@ -273,11 +252,6 @@ app.get('/api/health', (req, res) => {
   res.status(200).json(healthData);
 });
 
-/**
- * @route   GET /api/status
- * @desc    Detailed status information
- * @access  Public
- */
 app.get('/api/status', (req, res) => {
   const status = {
     success: true,
@@ -300,7 +274,7 @@ app.get('/api/status', (req, res) => {
 
 logger.info('🔗 Registering API routes...');
 
-// Apply auth limiter to auth routes
+// Apply auth limiter to specific endpoints (exact paths)
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', authLimiter);
 
@@ -309,8 +283,8 @@ app.use('/api/expenses', createDeleteLimiter);
 app.use('/api/budgets', createDeleteLimiter);
 app.use('/api/reminders', createDeleteLimiter);
 
-// Mount routes with correct names
-app.use('/api/auth', require('./routes/auth'));
+// Mount routes (ensure filenames match)
+app.use('/api/auth', require('./routes/auth')); // updated to authRoutes
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/budgets', require('./routes/budgets'));
 app.use('/api/reminders', require('./routes/reminders'));
@@ -319,9 +293,6 @@ logger.info('✅ API routes registered');
 
 // ============= 404 HANDLER =============
 
-/**
- * 404 - Route not found
- */
 app.use((req, res, next) => {
   logger.warn('404 Not Found', { method: req.method, path: req.path });
   res.status(404).json({
@@ -334,13 +305,9 @@ app.use((req, res, next) => {
 
 // ============= ERROR HANDLING MIDDLEWARE =============
 
-/**
- * Central error handling middleware
- */
 app.use((err, req, res, next) => {
   const errorId = req.id || uuidv4();
 
-  // Log error
   const errorData = {
     errorId,
     message: err.message,
@@ -356,7 +323,6 @@ app.use((err, req, res, next) => {
 
   logger.error('Application Error', errorData);
 
-  // Handle different error types
   let statusCode = 500;
   let message = 'Internal Server Error';
   let errors = null;
@@ -364,14 +330,11 @@ app.use((err, req, res, next) => {
   if (err.name === 'ValidationError') {
     statusCode = 400;
     message = 'Validation Error';
-    errors = Object.values(err.errors).map(e => ({
-      field: e.path,
-      message: e.message,
-    }));
+    errors = Object.values(err.errors).map(e => ({ field: e.path, message: e.message }));
   } else if (err.code === 11000) {
     statusCode = 409;
     message = 'Duplicate field value entered';
-    const field = Object.keys(err.keyPattern)[0];
+    const field = Object.keys(err.keyPattern || {})[0];
     errors = [{ field, message: `${field} already exists` }];
   } else if (err.name === 'CastError') {
     statusCode = 400;
@@ -387,7 +350,6 @@ app.use((err, req, res, next) => {
     message = err.message;
   }
 
-  // Send error response
   res.status(statusCode).json({
     success: false,
     message,
@@ -419,11 +381,9 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`\n🔗 Connection Information:`);
   console.log(`   • API URL: ${process.env.API_URL || `http://localhost:${PORT}`}`);
   console.log(`   • Database: MongoDB Connected`);
-  console.log(`   • CORS: Not configured (will use default browser policy)`);
+  console.log(`   • CORS: Not configured (enable if cross-origin access required)`);
   console.log(`\n📚 Documentation:`);
   console.log(`   • API Docs: ${process.env.API_URL || `http://localhost:${PORT}`}/api/docs`);
-  console.log(`   • Health Check: ${process.env.API_URL || `http://localhost:${PORT}`}/api/health`);
-  console.log(`   • Status: ${process.env.API_URL || `http://localhost:${PORT}`}/api/status`);
   console.log('\n✅ Ready to handle requests!\n');
 
   logger.info('Server started successfully', {
@@ -436,15 +396,8 @@ const server = app.listen(PORT, HOST, () => {
 
 // ============= GRACEFUL SHUTDOWN =============
 
-/**
- * Handle unhandled promise rejections
- */
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('❌ Unhandled Promise Rejection', {
-    reason: reason.toString(),
-    promise: promise.toString(),
-  });
-
+  logger.error('❌ Unhandled Promise Rejection', { reason: String(reason) });
   if (process.env.NODE_ENV === 'production') {
     server.close(() => {
       logger.info('Server closed due to unhandled rejection');
@@ -453,45 +406,28 @@ process.on('unhandledRejection', (reason, promise) => {
   }
 });
 
-/**
- * Handle uncaught exceptions
- */
 process.on('uncaughtException', (error) => {
-  logger.error('❌ Uncaught Exception', {
-    message: error.message,
-    stack: error.stack,
-  });
-
+  logger.error('❌ Uncaught Exception', { message: error.message, stack: error.stack });
   server.close(() => {
     logger.info('Server closed due to uncaught exception');
     process.exit(1);
   });
 });
 
-/**
- * Handle SIGTERM signal for graceful shutdown
- */
 process.on('SIGTERM', () => {
   logger.info('👋 SIGTERM signal received: closing HTTP server');
-
   server.close(() => {
     logger.info('✅ HTTP server closed');
     process.exit(0);
   });
-
-  // Force shutdown after 10 seconds
   setTimeout(() => {
     logger.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
   }, 10000);
 });
 
-/**
- * Handle SIGINT signal (Ctrl+C)
- */
 process.on('SIGINT', () => {
   logger.info('⏸️  SIGINT signal received: closing HTTP server');
-
   server.close(() => {
     logger.info('✅ HTTP server closed');
     process.exit(0);
@@ -499,5 +435,4 @@ process.on('SIGINT', () => {
 });
 
 // ============= EXPORT FOR TESTING =============
-
 module.exports = app;
