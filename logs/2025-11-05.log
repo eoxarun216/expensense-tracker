@@ -2,3 +2,24 @@
 [2025-11-05T01:57:39.630Z] [INFO] 🔗 Registering API routes... 
 [2025-11-05T01:57:39.971Z] [INFO] ✅ API routes registered 
 [2025-11-05T01:57:39.994Z] [INFO] Server started successfully {"port":"5000","host":"0.0.0.0","environment":"production","timestamp":"2025-11-05T01:57:39.988Z"}
+[2025-11-05T03:26:54.528Z] [INFO] 🔗 Registering API routes... 
+[2025-11-05T03:29:05.558Z] [INFO] 🔗 Registering API routes... 
+[2025-11-05T03:29:05.692Z] [INFO] ✅ API routes registered 
+[2025-11-05T03:29:05.702Z] [INFO] Server started successfully {"port":"5000","host":"0.0.0.0","environment":"production","timestamp":"2025-11-05T03:29:05.702Z"}
+[2025-11-05T03:29:13.403Z] [ERROR] Failed to connect to database {"error":"querySrv ENOTFOUND _mongodb._tcp.cluster.mongodb.net"}
+[2025-11-05T03:29:19.569Z] [INFO] 🔗 Registering API routes... 
+[2025-11-05T03:29:19.715Z] [INFO] ✅ API routes registered 
+[2025-11-05T03:29:19.725Z] [INFO] Server started successfully {"port":"5000","host":"0.0.0.0","environment":"production","timestamp":"2025-11-05T03:29:19.724Z"}
+[2025-11-05T03:29:27.472Z] [ERROR] Failed to connect to database {"error":"querySrv ENOTFOUND _mongodb._tcp.cluster.mongodb.net"}
+[2025-11-05T03:29:34.431Z] [INFO] 🔗 Registering API routes... 
+[2025-11-05T03:29:34.559Z] [INFO] ✅ API routes registered 
+[2025-11-05T03:29:34.565Z] [INFO] Server started successfully {"port":"5000","host":"0.0.0.0","environment":"production","timestamp":"2025-11-05T03:29:34.565Z"}
+[2025-11-05T03:29:42.269Z] [ERROR] Failed to connect to database {"error":"querySrv ENOTFOUND _mongodb._tcp.cluster.mongodb.net"}
+[2025-11-05T03:30:45.582Z] [INFO] 🔗 Registering API routes... 
+[2025-11-05T03:30:45.855Z] [INFO] ✅ API routes registered 
+[2025-11-05T03:30:45.871Z] [INFO] Server started successfully {"port":"5000","host":"0.0.0.0","environment":"production","timestamp":"2025-11-05T03:30:45.870Z"}
+[2025-11-05T03:30:53.606Z] [ERROR] Failed to connect to database {"error":"querySrv ENOTFOUND _mongodb._tcp.cluster.mongodb.net"}
+[2025-11-05T03:32:01.467Z] [INFO] 🔗 Registering API routes... 
+[2025-11-05T03:32:01.618Z] [INFO] ✅ API routes registered 
+[2025-11-05T03:32:01.626Z] [INFO] Server started successfully {"port":"5000","host":"0.0.0.0","environment":"production","timestamp":"2025-11-05T03:32:01.625Z"}
+[2025-11-05T03:32:09.356Z] [ERROR] Failed to connect to database {"error":"querySrv ENOTFOUND _mongodb._tcp.cluster.mongodb.net"}
