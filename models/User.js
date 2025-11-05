@@ -36,21 +36,19 @@ const UserSchema = new mongoose.Schema(
     },
 
     email: {
-      type: String,
-      required: [true, 'Please add an email'],
-      unique: [true, 'Email already exists'], // Note: Unique indexes can be tricky in sharded clusters
-      lowercase: true,
-      trim: true,
-      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please add a valid email'],
-      // index: true, // <-- REMOVED: Unique implies index, and it's explicitly defined below
-    },
-
-    password: {
-      type: String,
-      required: [true, 'Please add a password'],
-      minlength: [6, 'Password must be at least 6 characters'], // Adjusted for simplified controller
-      select: false, // Exclude password from queries by default
-    },
+    type: String,
+    unique: true,
+    required: true,
+    lowercase: true,          // Always store in lowercase
+    trim: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please add a valid email'],
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6,
+    select: false,            // Don't return by default
+  },
 
     phone: {
       type: String,

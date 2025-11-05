@@ -56,8 +56,14 @@ exports.login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ success: false, message: 'Email and password required' });
 
+    // Always lowercase!
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    if (!user || !(await bcrypt.compare(password, user.password)))
+    if (!user)
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+    // Always bcrypt compare!
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch)
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
     user.lastLogin = new Date();
@@ -74,6 +80,7 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, message: 'Login failed' });
   }
 };
+
 
 exports.getProfile = async (req, res) => {
   try {
